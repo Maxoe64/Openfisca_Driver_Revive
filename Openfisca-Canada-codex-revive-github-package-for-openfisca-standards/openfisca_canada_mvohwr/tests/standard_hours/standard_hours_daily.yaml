@@ -1,0 +1,39 @@
+---
+- name: "Highway - standard_hours__daily"
+  period: 2020-08-25
+  absolute_error_margin: 0
+  input:
+    persons:
+      highway_case:
+        work_category__daily_is_majority_highway_operator: true
+  output:
+    persons:
+      highway_case:
+        standard_hours__daily:
+          - 0
+
+- name: "city - standard_hours__daily"
+  period: 2020-08-25
+  absolute_error_margin: 0
+  input:
+    persons:
+      highway_case:
+        work_category__daily_is_majority_city_operator: true
+  output:
+    persons:
+      highway_case:
+        standard_hours__daily:
+          - 9
+
+- name: "other - standard_hours__daily"
+  period: 2020-08-25
+  absolute_error_margin: 0
+  input:
+    persons:
+      highway_case:
+        work_category__daily_is_majority_city_operator: false
+  output:
+    persons:
+      highway_case:
+        standard_hours__daily:
+          - 8

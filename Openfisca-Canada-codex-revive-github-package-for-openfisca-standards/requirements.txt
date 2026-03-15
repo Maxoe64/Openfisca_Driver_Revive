@@ -1,0 +1,2 @@
+# Runtime dependencies
+OpenFisca-Core[web-api]>=43,<44

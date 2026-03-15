@@ -1,0 +1,34 @@
+repositories:
+    # helm-git powered repository: You can treat any Git repository as a charts repository
+    - name: openfiscacanada-dts-csps
+      url: git+https://{{ requiredEnv "GITHUB_USER" }}:{{ requiredEnv "GITHUB_TOKEN" }}@github.com/DTS-STN/openfisca-canada-dts-csps@helm/charts?ref=main
+
+environments:
+    benrd: 
+    kylerd:
+    adamrd:
+    marcusrd:
+    ericrd:
+    pondrd:
+    #USING INT, MAIN AND SPRINT TO REFLECT OUR INTEGRATION (PR VERSION), MAIN (REFLECTING MAIN BRANCH), SPRINT (STATIC RELEASE VERSION FOR SPRINT REVIEW)
+    int:
+    main:
+    sprint:
+    prod-blue:
+    prod-green: 
+
+releases:
+# OPEN FISCA CANADA
+  - name: openfiscacanada-dts-csps-{{ .Environment.Name }}
+    chart: openfiscacanada-dts-csps/openfiscacanada-dts-csps
+    version: 0.0.3
+    values:
+      - overrides/openfiscacanada-dts-csps.yaml.gotmpl
+    labels:
+        category: dts
+        app: openfiscacanada-dts-csps
+        tier: server
+    namespace: openfiscacanada-dts-csps-{{ .Environment.Name }}
+    installed: true
+    wait: false
+    force: false

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenFisca Canada Overtime Calculator</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Canada MVOHWR Overtime Estimator</h1>
+      <p>Citizen-facing preview tool for Motor Vehicle Operator weekly hours.</p>
+      <p><a class="link-button" href="/start-here.html">New here? Read the citizen start guide</a></p>
+
+      <form id="calc-form">
+        <label>Bus operator hours <input type="number" step="0.1" name="weekly_hours_bus" value="0" /></label>
+        <label>City operator hours <input type="number" step="0.1" name="weekly_hours_city" value="0" /></label>
+        <label>Highway operator hours <input type="number" step="0.1" name="weekly_hours_highway" value="0" /></label>
+        <label>Other hours <input type="number" step="0.1" name="weekly_hours_other" value="0" /></label>
+        <label>Hourly wage ($) <input type="number" step="0.01" name="hourly_rate" value="25" /></label>
+        <button type="submit">Estimate pay</button>
+      </form>
+
+      <section id="result" class="result hidden"></section>
+
+      <section class="chat-box">
+        <h2>Ask the assistant (Ollama)</h2>
+        <p>App tries to auto-start Ollama on standard port <code>11434</code> if it's installed.</p>
+
+        <h3>Model selection</h3>
+        <div id="model-buttons" class="model-buttons">
+          <button type="button" class="model-button active" data-model="llama3.1">llama3.1</button>
+          <button type="button" class="model-button" data-model="gpt-oss:20b">gpt-oss:20b</button>
+          <button type="button" class="model-button" data-model="mistral">mistral</button>
+        </div>
+        <p id="model-selected" class="small-note">Selected model: llama3.1</p>
+
+        <p>Example questions:</p>
+        <ul id="example-questions">
+          <li><button type="button" class="example-question">I drove 52 city hours this week. How many hours are overtime?</button></li>
+          <li><button type="button" class="example-question">If my hourly wage is $29 and I worked 64 highway hours, what should I expect in overtime pay?</button></li>
+          <li><button type="button" class="example-question">I split time between city and highway routes. Which standard hours should I compare against?</button></li>
+        </ul>
+
+        <form id="chat-form">
+          <label>Your question <textarea name="message" rows="3" placeholder="Ask a question about your hours and overtime..."></textarea></label>
+          <button type="submit">Send to assistant</button>
+        </form>
+
+        <div id="chat-result" class="result hidden"></div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,28 @@
+image:
+  repository: mtscontainers.azurecr.io/openfiscacanada-dts-csps
+  tag: "{{ requiredEnv "DOCKER_TAG" }}" 
+  pullPolicy: Always
+
+extraEnv:
+  - name: OUR_VARIABLE_HERE
+    value: www.ourvaluehere.com
+
+ingress:
+      enabled: true
+      hosts:
+      {{ if or (eq .Environment.Name "prod-blue") (eq .Environment.Name "prod-green") }}
+        - openfiscacanada-dts-csps.{{ requiredEnv "BASE_DOMAIN" }}
+      {{ end }}      
+        - openfiscacanada-dts-csps-{{ .Environment.Name }}.{{ requiredEnv "BASE_DOMAIN" }}
+      annotations: {}
+      # kubernetes.io/ingress.class: traefik
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+livenessDelay: 60
+readinessDelay: 60
+livenessPath: /
+readinessPath: /
+port: 5000

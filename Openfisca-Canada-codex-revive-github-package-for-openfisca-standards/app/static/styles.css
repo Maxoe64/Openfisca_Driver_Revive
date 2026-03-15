@@ -1,0 +1,104 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f7fb;
+}
+
+.container {
+  max-width: 760px;
+  margin: 2rem auto;
+  padding: 1.25rem;
+  background: white;
+  border-radius: 10px;
+}
+
+form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+input,
+button,
+textarea {
+  padding: 0.6rem;
+}
+
+button {
+  background: #0b5ed7;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.result {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #eef6ff;
+  border-radius: 8px;
+}
+
+.hidden {
+  display: none;
+}
+
+.chat-box {
+  margin-top: 1.5rem;
+  border-top: 1px solid #d9e1ee;
+  padding-top: 1rem;
+}
+
+#example-questions {
+  padding-left: 1rem;
+}
+
+.example-question {
+  display: inline-block;
+  margin-bottom: 0.4rem;
+  text-align: left;
+  background: #5f708a;
+}
+
+
+.info-box {
+  margin-top: 1rem;
+  padding: 0.9rem;
+  border: 1px solid #d9e1ee;
+  border-radius: 8px;
+  background: #fafcff;
+}
+
+.link-button {
+  display: inline-block;
+  text-decoration: none;
+  background: #0b5ed7;
+  color: #fff;
+  padding: 0.65rem 0.85rem;
+  border-radius: 6px;
+}
+
+
+.model-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.model-button {
+  background: #4b5f7a;
+}
+
+.model-button.active {
+  background: #14532d;
+}
+
+.small-note {
+  color: #4b5563;
+  font-size: 0.92rem;
+}
