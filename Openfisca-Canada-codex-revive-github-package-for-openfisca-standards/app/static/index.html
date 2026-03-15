@@ -8,26 +8,125 @@
   </head>
   <body>
     <main class="container">
-      <h1>Canada MVOHWR Overtime Estimator</h1>
-      <p>Citizen-facing preview tool for Motor Vehicle Operator weekly hours.</p>
-      <p><a class="link-button" href="/start-here.html">New here? Read the citizen start guide</a></p>
+      <!-- ---- Header ---- -->
+      <div class="header-bar no-print">
+        <div>
+          <h1 data-i18n="title">Canada MVOHWR Overtime Estimator</h1>
+          <p data-i18n="subtitle" class="small-note">Citizen-facing preview tool for Motor Vehicle Operator weekly hours.</p>
+        </div>
+        <div>
+          <button class="lang-toggle" id="lang-toggle">Fran&ccedil;ais</button>
+          <a class="link-button btn-sm" href="/start-here.html" data-i18n="start_guide_link">Start guide</a>
+        </div>
+      </div>
 
-      <form id="calc-form">
-        <label>Bus operator hours <input type="number" step="0.1" name="weekly_hours_bus" value="0" /></label>
-        <label>City operator hours <input type="number" step="0.1" name="weekly_hours_city" value="0" /></label>
-        <label>Highway operator hours <input type="number" step="0.1" name="weekly_hours_highway" value="0" /></label>
-        <label>Other hours <input type="number" step="0.1" name="weekly_hours_other" value="0" /></label>
-        <label>Hourly wage ($) <input type="number" step="0.01" name="hourly_rate" value="25" /></label>
-        <button type="submit">Estimate pay</button>
-      </form>
+      <!-- ---- Tabs ---- -->
+      <div class="tab-bar no-print">
+        <button class="tab-btn active" data-tab="quick" data-i18n="tab_quick">Quick Estimate</button>
+        <button class="tab-btn" data-tab="daily" data-i18n="tab_daily">Daily Breakdown</button>
+        <button class="tab-btn" data-tab="history" data-i18n="tab_history">My History</button>
+        <button class="tab-btn" data-tab="rights" data-i18n="tab_rights">Know Your Rights</button>
+      </div>
 
-      <section id="result" class="result hidden"></section>
+      <!-- =============== TAB: Quick Estimate =============== -->
+      <section id="tab-quick" class="tab-panel active">
+        <form id="calc-form">
+          <label data-i18n="label_bus">Bus operator hours
+            <input type="number" step="0.1" min="0" name="weekly_hours_bus" value="0" />
+          </label>
+          <label data-i18n="label_city">City operator hours
+            <input type="number" step="0.1" min="0" name="weekly_hours_city" value="0" />
+          </label>
+          <label data-i18n="label_highway">Highway operator hours
+            <input type="number" step="0.1" min="0" name="weekly_hours_highway" value="0" />
+          </label>
+          <label data-i18n="label_other">Other hours
+            <input type="number" step="0.1" min="0" name="weekly_hours_other" value="0" />
+          </label>
+          <label data-i18n="label_rate">Hourly wage ($)
+            <input type="number" step="0.01" min="0" name="hourly_rate" value="25" />
+          </label>
+          <button type="submit" data-i18n="btn_estimate">Estimate pay</button>
+        </form>
 
-      <section class="chat-box">
-        <h2>Ask the assistant (Ollama)</h2>
-        <p>App tries to auto-start Ollama on standard port <code>11434</code> if it's installed.</p>
+        <section id="result" class="result hidden"></section>
 
-        <h3>Model selection</h3>
+        <div id="quick-actions" class="btn-row hidden no-print">
+          <button type="button" class="btn-secondary btn-sm" id="btn-save-quick" data-i18n="btn_save_week">Save this week</button>
+          <button type="button" class="btn-outline btn-sm" id="btn-print" data-i18n="btn_print">Print / Save PDF</button>
+        </div>
+      </section>
+
+      <!-- =============== TAB: Daily Breakdown =============== -->
+      <section id="tab-daily" class="tab-panel">
+        <p data-i18n="daily_intro">Enter your hours for each day of the week. The tool calculates <strong>both</strong> daily and weekly overtime, then uses whichever is higher (better for you).</p>
+
+        <form id="daily-form">
+          <label data-i18n="label_rate">Hourly wage ($)
+            <input type="number" step="0.01" min="0" name="daily_hourly_rate" value="25" />
+          </label>
+
+          <div class="daily-grid">
+            <div class="daily-grid-header">
+              <div class="daily-grid-cell" data-i18n="grid_day">Day</div>
+              <div class="daily-grid-cell" data-i18n="grid_bus">Bus</div>
+              <div class="daily-grid-cell" data-i18n="grid_city">City</div>
+              <div class="daily-grid-cell" data-i18n="grid_highway">Hwy</div>
+              <div class="daily-grid-cell" data-i18n="grid_other">Other</div>
+              <div class="daily-grid-cell" data-i18n="grid_holiday">Hol?</div>
+            </div>
+            <!-- rows injected by JS -->
+          </div>
+
+          <button type="submit" data-i18n="btn_calculate_daily">Calculate daily + weekly OT</button>
+        </form>
+
+        <section id="daily-result" class="result hidden"></section>
+
+        <div id="daily-actions" class="btn-row hidden no-print">
+          <button type="button" class="btn-secondary btn-sm" id="btn-save-daily" data-i18n="btn_save_week">Save this week</button>
+          <button type="button" class="btn-outline btn-sm" id="btn-print-daily" data-i18n="btn_print">Print / Save PDF</button>
+        </div>
+      </section>
+
+      <!-- =============== TAB: History =============== -->
+      <section id="tab-history" class="tab-panel">
+        <p data-i18n="history_intro">Your saved weekly estimates (stored in this browser only).</p>
+        <ul id="history-list" class="history-list"></ul>
+        <div class="btn-row no-print">
+          <button type="button" class="btn-danger btn-sm" id="btn-clear-history" data-i18n="btn_clear_history">Clear all history</button>
+        </div>
+      </section>
+
+      <!-- =============== TAB: Know Your Rights =============== -->
+      <section id="tab-rights" class="tab-panel">
+        <div class="rights-panel">
+          <h3 data-i18n="rights_title">What to do if you think you are owed overtime</h3>
+          <ol id="rights-steps">
+            <li data-i18n="rights_step1">Use this tool to estimate the overtime hours and pay you believe you are owed.</li>
+            <li data-i18n="rights_step2">Gather your pay stubs, work schedules, and any written agreements with your employer.</li>
+            <li data-i18n="rights_step3">Talk to your employer first. Show them your records and ask for the difference.</li>
+            <li data-i18n="rights_step4">If your employer does not resolve it, file a complaint with the <strong>Federal Labour Program</strong>.</li>
+          </ol>
+
+          <h3 data-i18n="rights_links_title">Useful links</h3>
+          <ul>
+            <li><a href="https://www.canada.ca/en/employment-social-development/services/labour-standards/reports/hours-work-motor-vehicle.html" target="_blank" rel="noopener" data-i18n="rights_link_guide">MVOHWR Guide (Canada.ca)</a></li>
+            <li><a href="https://www.canada.ca/en/employment-social-development/services/labour-standards/complaints.html" target="_blank" rel="noopener" data-i18n="rights_link_complaint">File a Labour Standards Complaint</a></li>
+            <li><a href="https://laws-lois.justice.gc.ca/eng/regulations/C.R.C.,_c._990/page-1.html" target="_blank" rel="noopener" data-i18n="rights_link_law">Read the MVOHWR Regulation (full text)</a></li>
+            <li><a href="https://www.canada.ca/en/employment-social-development/services/labour-standards.html" target="_blank" rel="noopener" data-i18n="rights_link_standards">Federal Labour Standards Overview</a></li>
+          </ul>
+
+          <h3 data-i18n="rights_limits_title">Important limits of this tool</h3>
+          <p data-i18n="rights_limits_body">This is an <strong>informational estimate only</strong>, not legal advice. Final entitlement depends on your complete employment details, contracts, collective agreements, and official interpretation by the Labour Program. When in doubt, contact the Labour Program directly at <strong>1-800-641-4049</strong>.</p>
+        </div>
+      </section>
+
+      <!-- =============== Chat (always visible below tabs) =============== -->
+      <section class="chat-box no-print">
+        <h2 data-i18n="chat_title">Ask the assistant (Ollama)</h2>
+
+        <h3 data-i18n="chat_model_title">Model selection</h3>
         <div id="model-buttons" class="model-buttons">
           <button type="button" class="model-button active" data-model="llama3.1">llama3.1</button>
           <button type="button" class="model-button" data-model="gpt-oss:20b">gpt-oss:20b</button>
@@ -35,16 +134,19 @@
         </div>
         <p id="model-selected" class="small-note">Selected model: llama3.1</p>
 
-        <p>Example questions:</p>
+        <p data-i18n="chat_examples_title">Example questions:</p>
         <ul id="example-questions">
-          <li><button type="button" class="example-question">I drove 52 city hours this week. How many hours are overtime?</button></li>
-          <li><button type="button" class="example-question">If my hourly wage is $29 and I worked 64 highway hours, what should I expect in overtime pay?</button></li>
-          <li><button type="button" class="example-question">I split time between city and highway routes. Which standard hours should I compare against?</button></li>
+          <li><button type="button" class="example-question" data-i18n="chat_ex1">I drove 52 city hours this week. How many hours are overtime?</button></li>
+          <li><button type="button" class="example-question" data-i18n="chat_ex2">If my hourly wage is $29 and I worked 64 highway hours, what should I expect in overtime pay?</button></li>
+          <li><button type="button" class="example-question" data-i18n="chat_ex3">I split time between city and highway routes. Which standard hours should I compare against?</button></li>
+          <li><button type="button" class="example-question" data-i18n="chat_ex4">What evidence should I collect before filing a complaint?</button></li>
         </ul>
 
         <form id="chat-form">
-          <label>Your question <textarea name="message" rows="3" placeholder="Ask a question about your hours and overtime..."></textarea></label>
-          <button type="submit">Send to assistant</button>
+          <label data-i18n="chat_label">Your question
+            <textarea name="message" rows="3" placeholder="Ask a question about your hours and overtime..."></textarea>
+          </label>
+          <button type="submit" data-i18n="chat_send">Send to assistant</button>
         </form>
 
         <div id="chat-result" class="result hidden"></div>
