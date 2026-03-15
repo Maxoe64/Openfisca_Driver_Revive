@@ -142,14 +142,17 @@
           <li><button type="button" class="example-question" data-i18n="chat_ex4">What evidence should I collect before filing a complaint?</button></li>
         </ul>
 
+        <div id="chat-result" class="chat-thread-container result hidden"></div>
+
         <form id="chat-form">
           <label data-i18n="chat_label">Your question
-            <textarea name="message" rows="3" placeholder="Ask a question about your hours and overtime..."></textarea>
+            <textarea name="message" rows="2" placeholder="Ask a question about your hours and overtime..."></textarea>
           </label>
-          <button type="submit" data-i18n="chat_send">Send to assistant</button>
+          <div class="btn-row">
+            <button type="submit" data-i18n="chat_send">Send to assistant</button>
+            <button type="button" class="btn-outline btn-sm" id="btn-clear-chat" data-i18n="chat_clear">New conversation</button>
+          </div>
         </form>
-
-        <div id="chat-result" class="result hidden"></div>
       </section>
     </main>
 
