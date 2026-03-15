@@ -9,15 +9,15 @@ class is_covered_by_mvohwr(Variable):
     reference = u"https://laws-lois.justice.gc.ca/eng/regulations/C.R.C.,_c._990/page-1.html#docCont"
 
     def formula(persons, period, parameters):
-      return (persons("does_transport_goods_or_passangers_by_motor_vehicle",period) +\
+      return (persons("does_transport_goods_or_passengers_by_motor_vehicle",period) +\
         persons("does_transport_mail_in_canada",period)) *\
         persons("falls_under_part_three_of_clc",period) *\
         persons("is_there_an_employment_relationship",period)
 
-class does_transport_goods_or_passangers_by_motor_vehicle(Variable):
+class does_transport_goods_or_passengers_by_motor_vehicle(Variable):
     value_type = bool
     entity = Person
-    label = u"Do you transport goods or passenger by motor vehicle?"
+    label = u"Do you transport goods or passengers by motor vehicle?"
     definition_period = DAY
     reference = u"https://laws-lois.justice.gc.ca/eng/regulations/C.R.C.,_c._990/page-1.html#docCont"
 

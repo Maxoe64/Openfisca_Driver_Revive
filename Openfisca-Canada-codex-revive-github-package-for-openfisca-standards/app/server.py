@@ -12,9 +12,15 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 try:
-    from app.calculator import WorkInput, calculate_overtime_preview
+    from app.calculator import (
+        DailyEntry, DailyWorkInput, WorkInput,
+        calculate_daily_breakdown, calculate_overtime_preview,
+    )
 except ModuleNotFoundError:  # Allows `python app/server.py` from repository root
-    from calculator import WorkInput, calculate_overtime_preview
+    from calculator import (
+        DailyEntry, DailyWorkInput, WorkInput,
+        calculate_daily_breakdown, calculate_overtime_preview,
+    )
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434/api/chat")
@@ -186,6 +192,31 @@ class AppHandler(SimpleHTTPRequestHandler):
                 return
 
             self._send_json(calculate_overtime_preview(work))
+            return
+
+        if self.path == "/api/daily-breakdown":
+            try:
+                raw_days = data.get("days", [])
+                days = [
+                    DailyEntry(
+                        day=str(d.get("day", "")),
+                        hours_bus=float(d.get("hours_bus", 0)),
+                        hours_city=float(d.get("hours_city", 0)),
+                        hours_highway=float(d.get("hours_highway", 0)),
+                        hours_other=float(d.get("hours_other", 0)),
+                        is_holiday=bool(d.get("is_holiday", False)),
+                    )
+                    for d in raw_days
+                ]
+                daily_input = DailyWorkInput(
+                    days=days,
+                    hourly_rate=float(data.get("hourly_rate", 0)),
+                )
+            except (ValueError, TypeError, AttributeError) as exc:
+                self._send_json({"error": f"Invalid payload: {exc}"}, HTTPStatus.BAD_REQUEST)
+                return
+
+            self._send_json(calculate_daily_breakdown(daily_input))
             return
 
         if self.path == "/api/chat":

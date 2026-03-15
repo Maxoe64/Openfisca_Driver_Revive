@@ -18,7 +18,7 @@ class overtime_clc_rate(Variable):
     entity = Person
     label = u"The overtime rate for CLC from the parameters"
     definition_period = DAY
-    reference = u"TODO"
+    reference = u"https://laws-lois.justice.gc.ca/eng/acts/L-2/page-36.html#h-342197"
 
     def formula(persons, period, parameters):
         return parameters(period).clc_standard_hours_of_work.overtime_clc_rate

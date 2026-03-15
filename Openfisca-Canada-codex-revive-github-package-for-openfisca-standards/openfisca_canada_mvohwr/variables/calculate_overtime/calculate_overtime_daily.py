@@ -22,9 +22,9 @@ class calculate_overtime_daily__overtime_worked_hours(Variable):
 class calculate_overtime_daily__non_highway_worked_hours(Variable):
     value_type = float
     entity = Person
-    label = u"Placeholder"
+    label = u"Daily overtime hours for non-highway work (standard hours minus actual)"
     definition_period = DAY
-    reference = u"TODO"
+    reference = u"https://laws-lois.justice.gc.ca/eng/regulations/C.R.C.,_c._990/page-1.html#h-604501"
 
     def formula(persons, period, parameters):
         ot_hours = persons("daily_summed_hours__non_highway_worked_hours", period) - persons("standard_hours__daily", period)

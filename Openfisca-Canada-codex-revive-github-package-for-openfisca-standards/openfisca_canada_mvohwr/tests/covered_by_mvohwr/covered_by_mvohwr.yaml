@@ -4,37 +4,37 @@
   absolute_error_margin: 0
   input:
     persons:
-      employee_does_not_transport_goods_or_passangers_or_mail:
-        does_transport_goods_or_passangers_by_motor_vehicle: false
+      employee_does_not_transport_goods_or_passengers_or_mail:
+        does_transport_goods_or_passengers_by_motor_vehicle: false
         does_transport_mail_in_canada: false
         falls_under_part_three_of_clc: false
         is_there_an_employment_relationship: true
-      employee_does_both_transport_goods_or_passangers_or_mail:
-        does_transport_goods_or_passangers_by_motor_vehicle: true
+      employee_does_both_transport_goods_or_passengers_or_mail:
+        does_transport_goods_or_passengers_by_motor_vehicle: true
         does_transport_mail_in_canada: true
         falls_under_part_three_of_clc: true
         is_there_an_employment_relationship: true
-      employee_does_transport_goods_or_passangers_not_mail:
-        does_transport_goods_or_passangers_by_motor_vehicle: true
+      employee_does_transport_goods_or_passengers_not_mail:
+        does_transport_goods_or_passengers_by_motor_vehicle: true
         does_transport_mail_in_canada: false
         falls_under_part_three_of_clc: true
         is_there_an_employment_relationship: true
-      employee_does_not_transport_goods_or_passangers_but_does_mail:
-        does_transport_goods_or_passangers_by_motor_vehicle: false
+      employee_does_not_transport_goods_or_passengers_but_does_mail:
+        does_transport_goods_or_passengers_by_motor_vehicle: false
         does_transport_mail_in_canada: true
         falls_under_part_three_of_clc: true
         is_there_an_employment_relationship: true
   output:
     persons:
-      employee_does_not_transport_goods_or_passangers_or_mail:
+      employee_does_not_transport_goods_or_passengers_or_mail:
         is_covered_by_mvohwr:
           - false
-      employee_does_both_transport_goods_or_passangers_or_mail:
+      employee_does_both_transport_goods_or_passengers_or_mail:
         is_covered_by_mvohwr:
           - true
-      employee_does_transport_goods_or_passangers_not_mail:
+      employee_does_transport_goods_or_passengers_not_mail:
         is_covered_by_mvohwr:
           - true
-      employee_does_not_transport_goods_or_passangers_but_does_mail:
+      employee_does_not_transport_goods_or_passengers_but_does_mail:
         is_covered_by_mvohwr:
           - true
