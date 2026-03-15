@@ -1,3 +1,37 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "OpenFisca-canada-csps"
+version = "13.0.4"
+description = "OpenFisca tax and benefit system for Canada"
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+requires-python = ">=3.10"
+authors = [
+    {name = "Government of Canada, Digital Technology Solutions", email = "michael.bungay@hrsdc-rhdcc.gc.ca"},
+]
+keywords = ["benefit", "microsimulation", "social", "tax"]
+dependencies = [
+    "OpenFisca-Core[web-api]>=43,<44",
+]
+
+[project.optional-dependencies]
+dev = [
+    "flake8>=6,<8",
+    "pytest>=7,<9",
+    "yamllint>=1.35,<2",
+]
+
+[project.scripts]
+mvohwr-ui = "app.server:main"
+
+[project.urls]
+Repository = "https://github.com/Maxoe64/Openfisca_Driver_Revive"
+
+[tool.setuptools.packages.find]
+include = ["openfisca_canada_mvohwr*", "app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests_app", "openfisca_canada_mvohwr/tests"]
