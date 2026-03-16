@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "OpenFisca-canada-csps"
+name = "openfisca-canada-mvohwr"
 version = "13.0.4"
 description = "OpenFisca tax and benefit system for Canada"
 readme = "README.md"
