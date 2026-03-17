@@ -505,7 +505,11 @@ chatForm.addEventListener("submit", async (event) => {
   }
 
   // Add assistant reply to history
-  chatHistory.push({ role: "assistant", content: data.reply });
+  let reply = data.reply;
+  if (data.searched) {
+    reply += "\n\n_Sources were retrieved from Canadian legislation websites._";
+  }
+  chatHistory.push({ role: "assistant", content: reply });
   renderChatHistory();
 });
 

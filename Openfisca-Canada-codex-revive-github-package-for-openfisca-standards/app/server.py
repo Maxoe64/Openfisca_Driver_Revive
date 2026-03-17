@@ -16,11 +16,13 @@ try:
         DailyEntry, DailyWorkInput, WorkInput,
         calculate_daily_breakdown, calculate_overtime_preview,
     )
+    from app.web_search import format_search_context, search_legislation, should_search
 except ModuleNotFoundError:  # Allows `python app/server.py` from repository root
     from calculator import (
         DailyEntry, DailyWorkInput, WorkInput,
         calculate_daily_breakdown, calculate_overtime_preview,
     )
+    from web_search import format_search_context, search_legislation, should_search
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434/api/chat")
@@ -91,11 +93,14 @@ def request_ollama_chat(
     estimate_context: dict | None = None,
     model: str | None = None,
     history: list[dict] | None = None,
-) -> tuple[str, str]:
+) -> tuple[str, str, bool]:
     """Send a chat request to Ollama with full conversation history.
 
     ``history`` is a list of prior ``{"role": "user"|"assistant", "content": ...}``
     dicts so the model can follow up on earlier exchanges.
+
+    Returns ``(response_text, model_used, searched)`` where *searched* indicates
+    whether web search results were injected into the context.
     """
     ensure_ollama_running()
 
@@ -109,6 +114,15 @@ def request_ollama_chat(
         system_content += (
             f"\n\nThe citizen's current overtime estimate data:\n{context_json}"
         )
+
+    # Web search: fetch current legislation when the question warrants it.
+    searched = False
+    if should_search(user_message):
+        results = search_legislation(user_message)
+        search_ctx = format_search_context(results)
+        if search_ctx:
+            system_content += f"\n{search_ctx}"
+            searched = True
 
     # Build the messages array: system prompt, then prior history, then new user msg.
     messages: list[dict] = [{"role": "system", "content": system_content}]
@@ -145,7 +159,7 @@ def request_ollama_chat(
         ) from exc
 
     data = json.loads(raw)
-    return data.get("message", {}).get("content", "No response from model."), selected_model
+    return data.get("message", {}).get("content", "No response from model."), selected_model, searched
 
 
 def fetch_ollama_models() -> list[str]:
@@ -245,7 +259,7 @@ class AppHandler(SimpleHTTPRequestHandler):
                 self._send_json({"error": "message is required"}, HTTPStatus.BAD_REQUEST)
                 return
             try:
-                response, used_model = request_ollama_chat(
+                response, used_model, searched = request_ollama_chat(
                     user_message,
                     data.get("estimate"),
                     selected_model,
@@ -255,7 +269,10 @@ class AppHandler(SimpleHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, HTTPStatus.BAD_GATEWAY)
                 return
 
-            self._send_json({"reply": response, "model": used_model})
+            reply_payload: dict = {"reply": response, "model": used_model}
+            if searched:
+                reply_payload["searched"] = True
+            self._send_json(reply_payload)
             return
 
         self._send_json({"error": "Not found"}, HTTPStatus.NOT_FOUND)

@@ -1,2 +1,3 @@
 # Runtime dependencies
 OpenFisca-Core[web-api]>=43,<44
+duckduckgo-search>=7.0,<8
