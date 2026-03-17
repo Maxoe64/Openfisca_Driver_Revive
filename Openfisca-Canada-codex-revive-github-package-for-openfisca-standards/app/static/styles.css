@@ -267,6 +267,39 @@ button:disabled { background: #9cb0cc; cursor: not-allowed; }
 .model-button { background: #4b5f7a; }
 .model-button.active { background: #14532d; }
 
+/* ---- Chat thread ---- */
+.chat-thread-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.chat-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.chat-bubble {
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  max-width: 85%;
+  line-height: 1.45;
+  font-size: 0.92rem;
+}
+
+.chat-user {
+  align-self: flex-end;
+  background: #dbeafe;
+  border-bottom-right-radius: 3px;
+}
+
+.chat-assistant {
+  align-self: flex-start;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-bottom-left-radius: 3px;
+}
+
 .small-note {
   color: #4b5563;
   font-size: 0.88rem;

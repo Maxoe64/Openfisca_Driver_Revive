@@ -90,24 +90,42 @@ def request_ollama_chat(
     user_message: str,
     estimate_context: dict | None = None,
     model: str | None = None,
+    history: list[dict] | None = None,
 ) -> tuple[str, str]:
+    """Send a chat request to Ollama with full conversation history.
+
+    ``history`` is a list of prior ``{"role": "user"|"assistant", "content": ...}``
+    dicts so the model can follow up on earlier exchanges.
+    """
     ensure_ollama_running()
 
     selected_model = (model or OLLAMA_MODEL).strip()
-    context_json = json.dumps(estimate_context or {}, ensure_ascii=False)
+
+    # Inject estimate context into the system prompt so the model always has it,
+    # even across multi-turn follow-ups where history is replayed verbatim.
+    system_content = SYSTEM_PROMPT
+    if estimate_context:
+        context_json = json.dumps(estimate_context, ensure_ascii=False)
+        system_content += (
+            f"\n\nThe citizen's current overtime estimate data:\n{context_json}"
+        )
+
+    # Build the messages array: system prompt, then prior history, then new user msg.
+    messages: list[dict] = [{"role": "system", "content": system_content}]
+
+    # Replay prior conversation turns so the model has context.
+    for turn in (history or []):
+        role = turn.get("role", "")
+        content = turn.get("content", "")
+        if role in ("user", "assistant") and content:
+            messages.append({"role": role, "content": content})
+
+    messages.append({"role": "user", "content": user_message})
+
     payload = {
         "model": selected_model,
         "stream": False,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": (
-                    f"Citizen question: {user_message}\n"
-                    f"Current overtime estimate context: {context_json}"
-                ),
-            },
-        ],
+        "messages": messages,
     }
 
     req = urllib.request.Request(
@@ -222,6 +240,7 @@ class AppHandler(SimpleHTTPRequestHandler):
         if self.path == "/api/chat":
             user_message = str(data.get("message", "")).strip()
             selected_model = str(data.get("model", "")).strip() or OLLAMA_MODEL
+            chat_history = data.get("history") or []
             if not user_message:
                 self._send_json({"error": "message is required"}, HTTPStatus.BAD_REQUEST)
                 return
@@ -230,6 +249,7 @@ class AppHandler(SimpleHTTPRequestHandler):
                     user_message,
                     data.get("estimate"),
                     selected_model,
+                    history=chat_history,
                 )
             except RuntimeError as exc:
                 self._send_json({"error": str(exc)}, HTTPStatus.BAD_GATEWAY)

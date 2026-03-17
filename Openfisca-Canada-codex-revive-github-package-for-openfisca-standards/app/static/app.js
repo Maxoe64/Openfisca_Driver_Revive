@@ -54,6 +54,9 @@ const TRANSLATIONS = {
     chat_ex4: "What evidence should I collect before filing a complaint?",
     chat_label: "Your question",
     chat_send: "Send to assistant",
+    chat_clear: "New conversation",
+    chat_you: "You",
+    chat_assistant: "Assistant",
     result_classification: "Classification",
     result_majority: "Majority category",
     result_total_hours: "Total hours",
@@ -117,6 +120,9 @@ const TRANSLATIONS = {
     chat_ex4: "Quelles preuves dois-je rassembler avant de d\u00e9poser une plainte\u00a0?",
     chat_label: "Votre question",
     chat_send: "Envoyer \u00e0 l\u2019assistant",
+    chat_clear: "Nouvelle conversation",
+    chat_you: "Vous",
+    chat_assistant: "Assistant",
     result_classification: "Classification",
     result_majority: "Cat\u00e9gorie majoritaire",
     result_total_hours: "Heures totales",
@@ -409,7 +415,7 @@ document.getElementById("btn-clear-history").addEventListener("click", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Chat (Ollama)
+// Chat (Ollama) — multi-turn conversation
 // ---------------------------------------------------------------------------
 const chatForm = document.getElementById("chat-form");
 const chatResult = document.getElementById("chat-result");
@@ -418,6 +424,8 @@ const modelButtons = document.querySelectorAll(".model-button");
 const modelSelected = document.getElementById("model-selected");
 
 let selectedModel = "llama3.1";
+// Conversation history: array of {role: "user"|"assistant", content: string}
+let chatHistory = [];
 
 function activateModel(model) {
   selectedModel = model;
@@ -438,31 +446,73 @@ exampleQuestions.forEach(button => {
   });
 });
 
+function renderChatHistory() {
+  if (chatHistory.length === 0) {
+    chatResult.classList.add("hidden");
+    return;
+  }
+
+  let html = '<div class="chat-thread">';
+  for (const turn of chatHistory) {
+    if (turn.role === "user") {
+      html += `<div class="chat-bubble chat-user"><strong>${t("chat_you")}:</strong> ${escapeHtml(turn.content)}</div>`;
+    } else {
+      html += `<div class="chat-bubble chat-assistant"><strong>${t("chat_assistant")}:</strong> ${turn.content.replace(/\n/g, "<br/>")}</div>`;
+    }
+  }
+  html += "</div>";
+  chatResult.innerHTML = html;
+  chatResult.classList.remove("hidden");
+  // Scroll to bottom of chat
+  chatResult.scrollTop = chatResult.scrollHeight;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 chatForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = chatForm.elements.message.value.trim();
   if (!message) return;
 
+  // Add user message to history and render immediately
+  chatHistory.push({ role: "user", content: message });
+  renderChatHistory();
+  chatForm.elements.message.value = "";
+
   const estimate = latestDailyEstimate || latestEstimate;
 
+  // Send full conversation history to the backend
   const response = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, estimate, model: selectedModel }),
+    body: JSON.stringify({
+      message,
+      estimate,
+      model: selectedModel,
+      history: chatHistory.slice(0, -1),  // all turns before the current one
+    }),
   });
   const data = await response.json();
 
   if (!response.ok) {
-    chatResult.innerHTML = `<strong>Error:</strong> ${data.error}`;
-    chatResult.classList.remove("hidden");
+    chatHistory.push({ role: "assistant", content: `Error: ${data.error}` });
+    renderChatHistory();
     return;
   }
 
-  chatResult.innerHTML = `
-    <h3>Assistant reply (${data.model})</h3>
-    <p>${data.reply.replace(/\n/g, "<br/>")}</p>
-  `;
-  chatResult.classList.remove("hidden");
+  // Add assistant reply to history
+  chatHistory.push({ role: "assistant", content: data.reply });
+  renderChatHistory();
+});
+
+// Clear chat button
+document.getElementById("btn-clear-chat").addEventListener("click", () => {
+  chatHistory = [];
+  renderChatHistory();
 });
 
 // ---------------------------------------------------------------------------
