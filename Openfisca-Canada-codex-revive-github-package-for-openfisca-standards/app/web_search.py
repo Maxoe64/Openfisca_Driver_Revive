@@ -3,47 +3,26 @@
 Uses DuckDuckGo to find relevant legislation snippets from official
 Canadian government websites.  Results are injected into the Ollama
 system prompt so the LLM can cite up-to-date legal references.
+
+Every chat interaction triggers a search so the model always has access
+to the most current available legislation.
 """
 
 from __future__ import annotations
 
-import re
 import time
 
 from duckduckgo_search import DDGS
 
 # ---------------------------------------------------------------------------
-# 1. Search trigger – detect legislation-related questions
-# ---------------------------------------------------------------------------
-
-_LEGISLATION_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(p, re.IGNORECASE)
-    for p in [
-        r"\b(law|legislation|regulation|act|code|statute|section|part\s+III)\b",
-        r"\b(canada\s+labour\s+code|clc|mvohwr|motor\s+vehicle\s+operator)\b",
-        r"\b(current|latest|amended|updated|new|recent)\b.*\b(rule|regulation|law|standard)\b",
-        r"\bwhat\s+does\s+the\s+(law|regulation|code)\s+say\b",
-        r"\b(legal|rights|entitle|complaint|file\s+a\s+complaint)\b",
-        r"\b(minimum\s+wage|overtime\s+rate|holiday\s+pay)\b",
-        r"\b(SOR|C\.R\.C\.|DORS)\b",
-    ]
-]
-
-
-def should_search(user_message: str) -> bool:
-    """Return *True* when the message likely asks about legislation."""
-    text = user_message.strip()
-    if len(text) < 15:
-        return False
-    return any(pat.search(text) for pat in _LEGISLATION_PATTERNS)
-
-
-# ---------------------------------------------------------------------------
-# 2. Search execution (DuckDuckGo, scoped to Canadian gov sites)
+# Search execution (DuckDuckGo, scoped to Canadian gov sites)
 # ---------------------------------------------------------------------------
 
 _SITE_QUALIFIERS = "site:laws-lois.justice.gc.ca OR site:canada.ca"
-_BASE_QUERY = "MVOHWR Canada Labour Code motor vehicle operator"
+_BASE_QUERY = (
+    "MVOHWR Canada Labour Code motor vehicle operator"
+    " hours of work overtime regulations"
+)
 
 _cache: dict[str, tuple[float, list[dict[str, str]]]] = {}
 _CACHE_TTL = 300  # seconds
@@ -55,10 +34,15 @@ def search_legislation(
 ) -> list[dict[str, str]]:
     """Search DuckDuckGo for Canadian legislation relevant to *user_message*.
 
+    The user's message is combined with a standing base query so that even
+    vague follow-ups (e.g. "how many hours is that?") still return relevant
+    legislation results.
+
     Returns a list of dicts with keys ``title``, ``url``, ``snippet``.
     Never raises – returns an empty list on failure.
     """
-    cache_key = user_message.strip().lower()[:200]
+    query = f"{user_message} {_BASE_QUERY} {_SITE_QUALIFIERS}"
+    cache_key = query.strip().lower()[:200]
     now = time.time()
 
     if cache_key in _cache:
@@ -70,7 +54,7 @@ def search_legislation(
         with DDGS() as ddgs:
             raw = list(
                 ddgs.text(
-                    f"{user_message} {_BASE_QUERY} {_SITE_QUALIFIERS}",
+                    query,
                     max_results=max_results,
                     region="ca-en",
                 )
@@ -92,7 +76,7 @@ def search_legislation(
 
 
 # ---------------------------------------------------------------------------
-# 3. Format results for LLM context injection
+# Format results for LLM context injection
 # ---------------------------------------------------------------------------
 
 

@@ -18,8 +18,12 @@ class FakeResponse:
         return json.dumps({"message": {"content": self._content}}).encode("utf-8")
 
 
+# All tests mock search_legislation so no network calls are made.
+_NO_SEARCH = patch("app.server.search_legislation", return_value=[])
+
+
 def test_request_ollama_chat_returns_message_with_selected_model():
-    with patch("app.server.ensure_ollama_running", return_value=None), patch(
+    with _NO_SEARCH, patch("app.server.ensure_ollama_running", return_value=None), patch(
         "urllib.request.urlopen", return_value=FakeResponse()
     ):
         reply, model, searched = request_ollama_chat(
@@ -30,7 +34,7 @@ def test_request_ollama_chat_returns_message_with_selected_model():
 
 
 def test_request_ollama_chat_autostarts_when_needed():
-    with patch("app.server.can_reach_ollama", side_effect=[False, True]), patch(
+    with _NO_SEARCH, patch("app.server.can_reach_ollama", side_effect=[False, True]), patch(
         "app.server.start_ollama_service", return_value=None
     ) as start_mock:
         with patch("urllib.request.urlopen", return_value=FakeResponse()):
@@ -51,7 +55,7 @@ def test_request_ollama_chat_sends_history():
         {"role": "assistant", "content": "You worked 5h of overtime."},
     ]
 
-    with patch("app.server.ensure_ollama_running", return_value=None), patch(
+    with _NO_SEARCH, patch("app.server.ensure_ollama_running", return_value=None), patch(
         "urllib.request.urlopen", side_effect=capture_urlopen
     ):
         reply, model, searched = request_ollama_chat(
@@ -85,7 +89,7 @@ def test_estimate_context_in_system_prompt():
         captured_payloads.append(json.loads(req.data.decode("utf-8")))
         return FakeResponse()
 
-    with patch("app.server.ensure_ollama_running", return_value=None), patch(
+    with _NO_SEARCH, patch("app.server.ensure_ollama_running", return_value=None), patch(
         "urllib.request.urlopen", side_effect=capture_urlopen
     ):
         request_ollama_chat(
@@ -114,7 +118,7 @@ def test_estimate_context_persists_across_followups():
         {"role": "assistant", "content": "First answer"},
     ]
 
-    with patch("app.server.ensure_ollama_running", return_value=None), patch(
+    with _NO_SEARCH, patch("app.server.ensure_ollama_running", return_value=None), patch(
         "urllib.request.urlopen", side_effect=capture_urlopen
     ):
         request_ollama_chat(
@@ -140,7 +144,7 @@ def test_no_estimate_context_when_none():
         captured_payloads.append(json.loads(req.data.decode("utf-8")))
         return FakeResponse()
 
-    with patch("app.server.ensure_ollama_running", return_value=None), patch(
+    with _NO_SEARCH, patch("app.server.ensure_ollama_running", return_value=None), patch(
         "urllib.request.urlopen", side_effect=capture_urlopen
     ):
         request_ollama_chat("Hello", model="llama3.1")

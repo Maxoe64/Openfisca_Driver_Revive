@@ -16,13 +16,13 @@ try:
         DailyEntry, DailyWorkInput, WorkInput,
         calculate_daily_breakdown, calculate_overtime_preview,
     )
-    from app.web_search import format_search_context, search_legislation, should_search
+    from app.web_search import format_search_context, search_legislation
 except ModuleNotFoundError:  # Allows `python app/server.py` from repository root
     from calculator import (
         DailyEntry, DailyWorkInput, WorkInput,
         calculate_daily_breakdown, calculate_overtime_preview,
     )
-    from web_search import format_search_context, search_legislation, should_search
+    from web_search import format_search_context, search_legislation
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434/api/chat")
@@ -115,14 +115,13 @@ def request_ollama_chat(
             f"\n\nThe citizen's current overtime estimate data:\n{context_json}"
         )
 
-    # Web search: fetch current legislation when the question warrants it.
+    # Web search: always fetch current legislation so the model has up-to-date context.
     searched = False
-    if should_search(user_message):
-        results = search_legislation(user_message)
-        search_ctx = format_search_context(results)
-        if search_ctx:
-            system_content += f"\n{search_ctx}"
-            searched = True
+    results = search_legislation(user_message)
+    search_ctx = format_search_context(results)
+    if search_ctx:
+        system_content += f"\n{search_ctx}"
+        searched = True
 
     # Build the messages array: system prompt, then prior history, then new user msg.
     messages: list[dict] = [{"role": "system", "content": system_content}]
