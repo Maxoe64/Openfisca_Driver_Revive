@@ -63,12 +63,12 @@ def test_request_ollama_chat_sends_history():
 
     assert reply == "follow-up reply"
 
-    # Check the payload sent to Ollama
     sent_messages = captured_payloads[0]["messages"]
 
-    # Should be: system, user (history), assistant (history), user (new)
+    # Should be: system (with estimate), user (history), assistant (history), user (new)
     assert len(sent_messages) == 4
     assert sent_messages[0]["role"] == "system"
+    assert "overtime_hours" in sent_messages[0]["content"]
     assert sent_messages[1]["role"] == "user"
     assert sent_messages[1]["content"] == "What is my overtime?"
     assert sent_messages[2]["role"] == "assistant"
@@ -77,8 +77,8 @@ def test_request_ollama_chat_sends_history():
     assert sent_messages[3]["content"] == "Can you explain that?"
 
 
-def test_request_ollama_chat_first_message_includes_estimate_context():
-    """First message (no history) should include the estimate context."""
+def test_estimate_context_in_system_prompt():
+    """Estimate context should be injected into the system prompt, not the user message."""
     captured_payloads = []
 
     def capture_urlopen(req, **kwargs):
@@ -92,18 +92,17 @@ def test_request_ollama_chat_first_message_includes_estimate_context():
             "How much OT?",
             {"overtime_hours": 5},
             model="llama3.1",
-            history=[],
         )
 
     sent_messages = captured_payloads[0]["messages"]
-    # system + user (with context)
-    assert len(sent_messages) == 2
-    assert "overtime_hours" in sent_messages[1]["content"]
-    assert "Citizen question" in sent_messages[1]["content"]
+    # Estimate data lives in the system prompt
+    assert "overtime_hours" in sent_messages[0]["content"]
+    # User message is sent as-is, no wrapping
+    assert sent_messages[1]["content"] == "How much OT?"
 
 
-def test_request_ollama_chat_followup_omits_estimate_context():
-    """Follow-up messages (with history) should NOT re-inject estimate context."""
+def test_estimate_context_persists_across_followups():
+    """Estimate context should be present in system prompt on every turn, not just the first."""
     captured_payloads = []
 
     def capture_urlopen(req, **kwargs):
@@ -126,7 +125,26 @@ def test_request_ollama_chat_followup_omits_estimate_context():
         )
 
     sent_messages = captured_payloads[0]["messages"]
-    last_msg = sent_messages[-1]
-    # Follow-up should be the raw message, not wrapped with "Citizen question:"
-    assert last_msg["content"] == "Follow-up question"
-    assert "Citizen question" not in last_msg["content"]
+    # System prompt still has the estimate context
+    assert "overtime_hours" in sent_messages[0]["content"]
+    # User messages are raw (no "Citizen question:" wrapping)
+    assert sent_messages[-1]["content"] == "Follow-up question"
+    assert sent_messages[1]["content"] == "First question"
+
+
+def test_no_estimate_context_when_none():
+    """When no estimate context is provided, the system prompt is unchanged."""
+    captured_payloads = []
+
+    def capture_urlopen(req, **kwargs):
+        captured_payloads.append(json.loads(req.data.decode("utf-8")))
+        return FakeResponse()
+
+    with patch("app.server.ensure_ollama_running", return_value=None), patch(
+        "urllib.request.urlopen", side_effect=capture_urlopen
+    ):
+        request_ollama_chat("Hello", model="llama3.1")
+
+    sent_messages = captured_payloads[0]["messages"]
+    # No estimate data appended
+    assert "overtime estimate data" not in sent_messages[0]["content"]

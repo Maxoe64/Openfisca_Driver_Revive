@@ -100,10 +100,18 @@ def request_ollama_chat(
     ensure_ollama_running()
 
     selected_model = (model or OLLAMA_MODEL).strip()
-    context_json = json.dumps(estimate_context or {}, ensure_ascii=False)
+
+    # Inject estimate context into the system prompt so the model always has it,
+    # even across multi-turn follow-ups where history is replayed verbatim.
+    system_content = SYSTEM_PROMPT
+    if estimate_context:
+        context_json = json.dumps(estimate_context, ensure_ascii=False)
+        system_content += (
+            f"\n\nThe citizen's current overtime estimate data:\n{context_json}"
+        )
 
     # Build the messages array: system prompt, then prior history, then new user msg.
-    messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages: list[dict] = [{"role": "system", "content": system_content}]
 
     # Replay prior conversation turns so the model has context.
     for turn in (history or []):
@@ -112,16 +120,7 @@ def request_ollama_chat(
         if role in ("user", "assistant") and content:
             messages.append({"role": role, "content": content})
 
-    # Append the new user message (with estimate context on the first message only).
-    if not history:
-        user_content = (
-            f"Citizen question: {user_message}\n"
-            f"Current overtime estimate context: {context_json}"
-        )
-    else:
-        user_content = user_message
-
-    messages.append({"role": "user", "content": user_content})
+    messages.append({"role": "user", "content": user_message})
 
     payload = {
         "model": selected_model,
