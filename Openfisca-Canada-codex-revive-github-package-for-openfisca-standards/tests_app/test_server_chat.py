@@ -22,7 +22,7 @@ def test_request_ollama_chat_returns_message_with_selected_model():
     with patch("app.server.ensure_ollama_running", return_value=None), patch(
         "urllib.request.urlopen", return_value=FakeResponse()
     ):
-        reply, model = request_ollama_chat(
+        reply, model, searched = request_ollama_chat(
             "How is overtime computed?", {"overtime_hours": 5}, model="gpt-oss:20b"
         )
     assert reply == "Test reply"
@@ -54,7 +54,7 @@ def test_request_ollama_chat_sends_history():
     with patch("app.server.ensure_ollama_running", return_value=None), patch(
         "urllib.request.urlopen", side_effect=capture_urlopen
     ):
-        reply, model = request_ollama_chat(
+        reply, model, searched = request_ollama_chat(
             "Can you explain that?",
             {"overtime_hours": 5},
             model="llama3.1",
