@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import html.parser
 import json
 import os
+import re
 import subprocess
 import time
 import urllib.error
@@ -34,6 +36,103 @@ SYSTEM_PROMPT = (
 )
 
 _OLLAMA_PROCESS: subprocess.Popen | None = None
+
+# ---------------------------------------------------------------------------
+# Legislation web-search: fetch current MVOHWR text from official sources
+# ---------------------------------------------------------------------------
+LEGISLATION_URLS = [
+    # MVOHWR regulation — full text
+    "https://laws-lois.justice.gc.ca/eng/regulations/C.R.C.,_c._990/page-1.html",
+    # Canada Labour Code Part III — hours of work / overtime
+    "https://laws-lois.justice.gc.ca/eng/acts/L-2/page-36.html",
+]
+
+# Simple cache: url -> (text, timestamp). TTL = 1 hour.
+_legislation_cache: dict[str, tuple[str, float]] = {}
+_LEGISLATION_CACHE_TTL = 3600
+
+
+class _HTMLTextExtractor(html.parser.HTMLParser):
+    """Minimal HTML-to-text converter (no external deps)."""
+
+    _SKIP_TAGS = frozenset({"script", "style", "noscript", "head"})
+
+    def __init__(self):
+        super().__init__()
+        self._pieces: list[str] = []
+        self._skip_depth = 0
+
+    def handle_starttag(self, tag: str, attrs):
+        if tag in self._SKIP_TAGS:
+            self._skip_depth += 1
+
+    def handle_endtag(self, tag: str):
+        if tag in self._SKIP_TAGS:
+            self._skip_depth = max(0, self._skip_depth - 1)
+        if tag in ("p", "br", "div", "li", "tr", "h1", "h2", "h3", "h4"):
+            self._pieces.append("\n")
+
+    def handle_data(self, data: str):
+        if self._skip_depth == 0:
+            self._pieces.append(data)
+
+    def get_text(self) -> str:
+        raw = "".join(self._pieces)
+        # Collapse excessive whitespace while keeping paragraph breaks.
+        raw = re.sub(r"[ \t]+", " ", raw)
+        raw = re.sub(r"\n{3,}", "\n\n", raw)
+        return raw.strip()
+
+
+def _fetch_url_text(url: str, timeout: float = 10) -> str:
+    """Fetch a URL and return its text content (HTML tags stripped)."""
+    req = urllib.request.Request(
+        url,
+        method="GET",
+        headers={"User-Agent": "OpenFiscaCanadaMVOHWR/1.0"},
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        raw_html = resp.read().decode("utf-8", errors="replace")
+
+    parser = _HTMLTextExtractor()
+    parser.feed(raw_html)
+    return parser.get_text()
+
+
+def fetch_legislation_context() -> str:
+    """Fetch and concatenate current MVOHWR legislation text from official URLs.
+
+    Results are cached for 1 hour. If a URL is unreachable the cached version
+    (if any) is used; if no cache exists the URL is silently skipped.
+    """
+    now = time.time()
+    sections: list[str] = []
+
+    for url in LEGISLATION_URLS:
+        cached = _legislation_cache.get(url)
+        if cached and (now - cached[1]) < _LEGISLATION_CACHE_TTL:
+            sections.append(cached[0])
+            continue
+
+        try:
+            text = _fetch_url_text(url)
+            # Truncate to ~4000 chars per page to keep the context reasonable.
+            if len(text) > 4000:
+                text = text[:4000] + "\n[... truncated for brevity ...]"
+            _legislation_cache[url] = (text, now)
+            sections.append(text)
+        except (urllib.error.URLError, OSError):
+            # Use stale cache if available, otherwise skip.
+            if cached:
+                sections.append(cached[0])
+
+    if not sections:
+        return ""
+
+    return (
+        "=== Current MVOHWR legislation (fetched from official Canadian government sources) ===\n\n"
+        + "\n\n---\n\n".join(sections)
+    )
 
 
 class ReusableThreadingHTTPServer(ThreadingHTTPServer):
@@ -91,11 +190,16 @@ def request_ollama_chat(
     estimate_context: dict | None = None,
     model: str | None = None,
     history: list[dict] | None = None,
+    search_legislation: bool = False,
 ) -> tuple[str, str]:
     """Send a chat request to Ollama with full conversation history.
 
     ``history`` is a list of prior ``{"role": "user"|"assistant", "content": ...}``
     dicts so the model can follow up on earlier exchanges.
+
+    When ``search_legislation`` is True the server fetches the current MVOHWR
+    regulation text from official Canadian government websites and includes it
+    in the context so the model can reference up-to-date legislation.
     """
     ensure_ollama_running()
 
@@ -109,6 +213,16 @@ def request_ollama_chat(
         system_content += (
             f"\n\nThe citizen's current overtime estimate data:\n{context_json}"
         )
+
+    # Optionally fetch and inject current legislation text.
+    if search_legislation:
+        legislation_text = fetch_legislation_context()
+        if legislation_text:
+            system_content += (
+                "\n\nUse the following official legislation text to ground your "
+                "answers. Cite specific sections when relevant.\n\n"
+                + legislation_text
+            )
 
     # Build the messages array: system prompt, then prior history, then new user msg.
     messages: list[dict] = [{"role": "system", "content": system_content}]
@@ -241,6 +355,7 @@ class AppHandler(SimpleHTTPRequestHandler):
             user_message = str(data.get("message", "")).strip()
             selected_model = str(data.get("model", "")).strip() or OLLAMA_MODEL
             chat_history = data.get("history") or []
+            search_legislation = bool(data.get("search_legislation", False))
             if not user_message:
                 self._send_json({"error": "message is required"}, HTTPStatus.BAD_REQUEST)
                 return
@@ -250,6 +365,7 @@ class AppHandler(SimpleHTTPRequestHandler):
                     data.get("estimate"),
                     selected_model,
                     history=chat_history,
+                    search_legislation=search_legislation,
                 )
             except RuntimeError as exc:
                 self._send_json({"error": str(exc)}, HTTPStatus.BAD_GATEWAY)

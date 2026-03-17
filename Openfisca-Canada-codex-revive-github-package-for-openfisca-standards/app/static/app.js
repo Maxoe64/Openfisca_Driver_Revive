@@ -55,6 +55,7 @@ const TRANSLATIONS = {
     chat_label: "Your question",
     chat_send: "Send to assistant",
     chat_clear: "New conversation",
+    chat_search_legislation: "Search current legislation (fetches MVOHWR text from Canada.ca)",
     chat_you: "You",
     chat_assistant: "Assistant",
     result_classification: "Classification",
@@ -121,6 +122,7 @@ const TRANSLATIONS = {
     chat_label: "Votre question",
     chat_send: "Envoyer \u00e0 l\u2019assistant",
     chat_clear: "Nouvelle conversation",
+    chat_search_legislation: "Rechercher la l\u00e9gislation actuelle (r\u00e9cup\u00e8re le texte du RMVHV depuis Canada.ca)",
     chat_you: "Vous",
     chat_assistant: "Assistant",
     result_classification: "Classification",
@@ -484,6 +486,7 @@ chatForm.addEventListener("submit", async (event) => {
   chatForm.elements.message.value = "";
 
   const estimate = latestDailyEstimate || latestEstimate;
+  const searchLegislation = document.getElementById("chat-search-legislation").checked;
 
   // Send full conversation history to the backend
   const response = await fetch("/api/chat", {
@@ -494,6 +497,7 @@ chatForm.addEventListener("submit", async (event) => {
       estimate,
       model: selectedModel,
       history: chatHistory.slice(0, -1),  // all turns before the current one
+      search_legislation: searchLegislation,
     }),
   });
   const data = await response.json();

@@ -1,7 +1,13 @@
 import json
+import urllib.error
 from unittest.mock import patch, call
 
-from app.server import request_ollama_chat
+from app.server import (
+    request_ollama_chat,
+    fetch_legislation_context,
+    _HTMLTextExtractor,
+    _legislation_cache,
+)
 
 
 class FakeResponse:
@@ -148,3 +154,119 @@ def test_no_estimate_context_when_none():
     sent_messages = captured_payloads[0]["messages"]
     # No estimate data appended
     assert "overtime estimate data" not in sent_messages[0]["content"]
+
+
+# ---------------------------------------------------------------------------
+# Legislation web-search tests
+# ---------------------------------------------------------------------------
+
+def test_html_text_extractor():
+    """HTMLTextExtractor should strip tags and skip script/style."""
+    html = "<html><head><title>T</title></head><body><script>var x=1;</script><p>Hello <b>world</b></p><style>.x{}</style><p>Second</p></body></html>"
+    parser = _HTMLTextExtractor()
+    parser.feed(html)
+    text = parser.get_text()
+    assert "Hello world" in text
+    assert "Second" in text
+    assert "var x=1" not in text
+    assert ".x{}" not in text
+
+
+class FakeHTTPResponse:
+    """Simulates urllib response for URL fetches."""
+
+    def __init__(self, body: str):
+        self._body = body.encode("utf-8")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def read(self):
+        return self._body
+
+
+def test_fetch_legislation_context_returns_text():
+    """fetch_legislation_context should return concatenated text from legislation URLs."""
+    _legislation_cache.clear()
+
+    fake_html = "<html><body><p>Section 3: Standard hours are 60 per week.</p></body></html>"
+
+    with patch("urllib.request.urlopen", return_value=FakeHTTPResponse(fake_html)):
+        result = fetch_legislation_context()
+
+    assert "Standard hours are 60 per week" in result
+    assert "Current MVOHWR legislation" in result
+
+
+def test_fetch_legislation_context_uses_cache():
+    """Subsequent calls should use the cache, not re-fetch."""
+    _legislation_cache.clear()
+
+    fake_html = "<html><body><p>Cached content</p></body></html>"
+
+    with patch("urllib.request.urlopen", return_value=FakeHTTPResponse(fake_html)) as mock_open:
+        fetch_legislation_context()
+        call_count_after_first = mock_open.call_count
+
+        # Second call should use cache
+        result = fetch_legislation_context()
+        assert mock_open.call_count == call_count_after_first
+
+    assert "Cached content" in result
+
+
+def test_fetch_legislation_context_handles_errors():
+    """When URLs fail and there's no cache, they should be silently skipped."""
+    _legislation_cache.clear()
+
+    with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("fail")):
+        result = fetch_legislation_context()
+
+    assert result == ""
+
+
+def test_search_legislation_injects_into_system_prompt():
+    """When search_legislation=True, legislation text should appear in the system prompt."""
+    captured_payloads = []
+
+    def capture_urlopen(req, **kwargs):
+        captured_payloads.append(json.loads(req.data.decode("utf-8")))
+        return FakeResponse()
+
+    fake_legislation = "=== Current MVOHWR legislation ===\nSection 3: 60 hours."
+
+    with patch("app.server.ensure_ollama_running", return_value=None), \
+         patch("urllib.request.urlopen", side_effect=capture_urlopen), \
+         patch("app.server.fetch_legislation_context", return_value=fake_legislation):
+        request_ollama_chat(
+            "What are the standard hours?",
+            model="llama3.1",
+            search_legislation=True,
+        )
+
+    system_msg = captured_payloads[0]["messages"][0]["content"]
+    assert "Section 3: 60 hours" in system_msg
+    assert "Cite specific sections" in system_msg
+
+
+def test_search_legislation_false_does_not_inject():
+    """When search_legislation=False, no legislation text should appear."""
+    captured_payloads = []
+
+    def capture_urlopen(req, **kwargs):
+        captured_payloads.append(json.loads(req.data.decode("utf-8")))
+        return FakeResponse()
+
+    with patch("app.server.ensure_ollama_running", return_value=None), \
+         patch("urllib.request.urlopen", side_effect=capture_urlopen):
+        request_ollama_chat(
+            "What are the standard hours?",
+            model="llama3.1",
+            search_legislation=False,
+        )
+
+    system_msg = captured_payloads[0]["messages"][0]["content"]
+    assert "MVOHWR legislation" not in system_msg
